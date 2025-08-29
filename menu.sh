@@ -290,7 +290,7 @@ show_menu() {
     echo -e "${BLUE}${BOLD}2. 启动酒馆${NC}"
     echo -e "${MAGENTA}${BOLD}3. 更新酒馆${NC}"
     echo -e "${BRIGHT_RED}${BOLD}4. 删除酒馆${NC}"
-    echo -e "${BRIGHT_CYAN}${BOLD}5. 备份酒馆数据${NC}"
+    echo -e "${BRIGHT_CYAN}${BOLD}5. 备份酒馆${NC}"
     echo -e "${BRIGHT_BLUE}${BOLD}6. 更新Termux${NC}"
     echo -e "${CYAN}${BOLD}================================${NC}"
     echo -ne "${BRIGHT_CYAN}${BOLD}请选择操作 (0-6): ${NC}"
