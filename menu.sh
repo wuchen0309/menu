@@ -18,7 +18,7 @@ NC='\033[0m'
 
 # 启动时自动清屏并回到主目录
 clear
-cd ~
+cd "$HOME"
 
 # 初始化备份脚本（如果不存在）
 init_backup_script() {
@@ -54,10 +54,9 @@ if [ ! -d "$src_dir" ]; then
     exit 1
 fi
 
-# 检查 Termux 存储符号链接是否存在 (基本判断 termux-setup-storage 是否生效)
-if [ ! -d "$backup_dir_base" ]; then
-    echo "❌ 错误：Termux 存储链接目录 '$backup_dir_base' 不存在。"
-    echo "请先执行 'termux-setup-storage' 并授予权限，然后重新启动 Termux。"
+# 检查 Term储符号链接是否存在 (ux-setup-storage 是否生效)
+if !" ]; then 储链接目录 '$backup_dir_base' 不存在。"
+先执行 'termux-setup-storage' 并授予权限，然后重新启动 Termux。"
     exit 1
 fi
 
@@ -118,41 +117,85 @@ EOF
 # 调用初始化函数
 init_backup_script
 
-# 检查并安装必要工具（仅安装缺失项）
+# 检查并安装必要工具（详细提示）
 check_tools() {
     echo -e "${CYAN}${BOLD}==== 检查必要工具 ====${NC}"
-
-    local missing_tools=()
+    
+    local tools_installed=0
+    local tools_missing=0
+    local install_failed=0
 
     # 检查 git
-    if ! command -v git &>/dev/null; then
-        missing_tools+=(git)
+    if command -v git &>/dev/null; then
+        echo -e "${GREEN}✓ git 已安装${NC}"
+        tools_installed=$((tools_installed + 1))
+    else
+        echo -e "${YELLOW}⚠ git 未安装，准备安装...${NC}"
+        tools_missing=$((tools_missing + 1))
+        pkg install git -y
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✓ git 安装成功${NC}"
+        else
+            echo -e "${RED}✗ git 安装失败${NC}"
+            install_failed=1
+        fi
     fi
 
     # 检查 nodejs
-    if ! command -v node &>/dev/null; then
-        missing_tools+=(nodejs-lts)
+    if command -v node &>/dev/null; then
+        echo -e "${GREEN}✓ nodejs 已安装${NC}"
+        tools_installed=$((tools_installed + 1))
+    else
+        echo -e "${YELLOW}⚠ nodejs 未安装，准备安装...${NC}"
+        tools_missing=$((tools_missing + 1))
+        pkg install nodejs-lts -y
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✓ nodejs 安装成功${NC}"
+        else
+            echo -e "${RED}✗ nodejs 安装失败${NC}"
+            install_failed=1
+        fi
     fi
 
     # 检查 nano
-    if ! command -v nano &>/dev/null; then
-        missing_tools+=(nano)
+    if command -v nano &>/dev/null; then
+        echo -e "${GREEN}✓ nano 已安装${NC}"
+        tools_installed=$((tools_installed + 1))
+    else
+        echo -e "${YELLOW}⚠ nano 未安装，准备安装...${NC}"
+        tools_missing=$((tools_missing + 1))
+        pkg install nano -y
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✓ nano 安装成功${NC}"
+        else
+            echo -e "${RED}✗ nano 安装失败${NC}"
+            install_failed=1
+        fi
     fi
 
     # 检查 zip
-    if ! command -v zip &>/dev/null; then
-        missing_tools+=(zip)
-    fi
-
-    # 如果有缺失的工具，则安装它们
-    if [ ${#missing_tools[@]} -gt 0 ]; then
-        echo -e "${YELLOW}${BOLD}正在安装缺失的工具: ${missing_tools[*]}${NC}"
-        pkg install "${missing_tools[@]}" -y
+    if command -v zip &>/dev/null; then
+        echo -e "${GREEN}✓ zip 已安装${NC}"
+        tools_installed=$((tools_installed + 1))
     else
-        echo -e "${GREEN}${BOLD}所有必要工具均已安装，跳过安装步骤${NC}"
+        echo -e "${YELLOW}⚠ zip 未安装，准备安装...${NC}"
+        tools_missing=$((tools_missing + 1))
+        pkg install zip -y
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✓ zip 安装成功${NC}"
+        else
+            echo -e "${RED}✗ zip 安装失败${NC}"
+            install_failed=1
+        fi
     fi
 
-    echo -e "${GREEN}${BOLD}工具检查完成！${NC}"
+    if [ $install_failed -eq 1 ]; then
+        echo -e "${RED}${BOLD}工具安装失败！请检查网络连接或存储空间${NC}"
+        return 1
+    fi
+
+    echo -e "${GREEN}${BOLD}工具检查完成！已安装: $tools_installed 个，新安装: $tools_missing 个${NC}"
+    return 0
 }
 
 # 部署酒馆
@@ -160,7 +203,7 @@ deploy_sillytavern() {
     echo -e "${CYAN}${BOLD}==== 部署酒馆 ====${NC}"
     
     # 强制回到主目录执行
-    cd ~
+    cd "$HOME"
     
     # 检查是否已存在
     if [ -d "$HOME/SillyTavern" ]; then
@@ -175,26 +218,50 @@ deploy_sillytavern() {
         rm -rf "$HOME/SillyTavern"
         # 如果用户选择重新部署，则检查工具
         check_tools
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}${BOLD}工具安装失败，部署取消！${NC}"
+            return 1
+        fi
     fi
     
     # 如果是全新安装，直接检查工具
     if [ ! -d "$HOME/SillyTavern" ]; then
         check_tools
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}${BOLD}工具安装失败，部署取消！${NC}"
+            return 1
+        fi
     fi
     
     # 执行克隆，并捕获退出码
+    echo -e "${YELLOW}${BOLD}正在克隆酒馆仓库...${NC}"
+    echo -e "${CYAN}提示：按 CTRL+C 可中断克隆过程${NC}"
+    
+    # 设置信号处理，捕获 CTRL+C
+    trap 'echo -e "\n${RED}${BOLD}检测到中断信号！${NC}"; exit 130' INT
+    
     git clone https://github.com/SillyTavern/SillyTavern -b release "$HOME/SillyTavern"
     local clone_exit_code=$?
+    
+    # 恢复信号处理
+    trap - INT
 
     if [ $clone_exit_code -eq 0 ]; then
-        echo -e "${GREEN}${BOLD}酒馆部署完成！${NC}"
+        echo -e "${GREEN}${BOLD}✅ 酒馆部署完成！${NC}"
+        return 0
     elif [ $clone_exit_code -eq 130 ]; then
         echo -e "${RED}${BOLD}❌ 克隆过程被用户中断（CTRL+C）！${NC}"
         echo -e "${YELLOW}${BOLD}正在返回主菜单...${NC}"
-        return 1  # 返回主菜单
+        # 清理可能存在的部分克隆的目录
+        if [ -d "$HOME/SillyTavern" ]; then
+            rm -rf "$HOME/SillyTavern"
+            echo -e "${YELLOW}已清理部分克隆的目录${NC}"
+        fi
+        return 1
     else
         echo -e "${RED}${BOLD}❌ 酒馆克隆失败，退出码: $clone_exit_code${NC}"
-        return 1  # 返回主菜单
+        echo -e "${YELLOW}请检查网络连接或GitHub访问权限${NC}"
+        return 1
     fi
 }
 
@@ -253,7 +320,7 @@ delete_sillytavern() {
     echo -e "${CYAN}${BOLD}==== 删除酒馆 ====${NC}"
 
     # 强制回到主目录执行
-    cd ~
+    cd "$HOME"
 
     # 检查目录是否存在
     if [ ! -d "$HOME/SillyTavern" ]; then
@@ -308,7 +375,7 @@ show_menu() {
 # 退出脚本
 exit_script() {
     echo -e "${YELLOW}${BOLD}退出脚本，再见！${NC}"
-    cd ~
+    cd "$HOME"
     clear
     exit 0
 }
@@ -330,7 +397,34 @@ while true; do
         1)
             # 先更新系统包列表
             echo -e "${CYAN}${BOLD}==== 更新系统包 ====${NC}"
-            pkg update && pkg upgrade -y
+            echo -e "${YELLOW}正在更新系统包，请稍候...${NC}"
+            
+            # 设置超时时间（300秒=5分钟）
+            timeout 300 pkg update && pkg upgrade -y
+            local update_exit_code=$?
+            
+            if [ $update_exit_code -eq 0 ]; then
+                echo -e "${GREEN}${BOLD}✅ 系统包更新完成！${NC}"
+            elif [ $update_exit_code -eq 124 ]; then
+                echo -e "${RED}${BOLD}❌ 系统包更新超时！${NC}"
+                echo -e "${YELLOW}${BOLD}是否继续部署? (y/N): ${NC}"
+                read -r continue_deploy
+                if [[ $continue_deploy != "y" && $continue_deploy != "Y" ]]; then
+                    echo -e "${YELLOW}${BOLD}取消部署，返回主菜单${NC}"
+                    press_any_key
+                    continue
+                fi
+            else
+                echo -e "${RED}${BOLD}❌ 系统包更新失败！错误代码: $update_exit_code${NC}"
+                echo -e "${YELLOW}${BOLD}是否继续部署? (y/N): ${NC}"
+                read -r continue_deploy
+                if [[ $continue_deploy != "y" && $continue_deploy != "Y" ]]; then
+                    echo -e "${YELLOW}${BOLD}取消部署，返回主菜单${NC}"
+                    press_any_key
+                    continue
+                fi
+            fi
+            
             deploy_sillytavern
             press_any_key
             ;;
