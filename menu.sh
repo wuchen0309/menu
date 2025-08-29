@@ -223,6 +223,37 @@ update_sillytavern() {
     fi
 }
 
+# 删除酒馆
+delete_sillytavern() {
+    echo -e "${CYAN}${BOLD}==== 删除酒馆 ====${NC}"
+    
+    # 强制回到主目录执行
+    cd ~
+    
+    # 检查目录是否存在
+    if [ ! -d "$HOME/SillyTavern" ]; then
+        echo -e "${YELLOW}${BOLD}酒馆目录不存在，无需删除${NC}"
+        return 0
+    fi
+    
+    # 确认删除
+    echo -e "${BRIGHT_RED}${BOLD}警告：此操作将永久删除 SillyTavern 目录及其所有内容！${NC}"
+    echo -ne "${YELLOW}${BOLD}确认删除? (y/N): ${NC}"
+    read -r confirm
+    if [[ $confirm != "y" && $confirm != "Y" ]]; then
+        echo -e "${YELLOW}${BOLD}取消删除${NC}"
+        return 0
+    fi
+    
+    # 执行删除
+    rm -rf ~/SillyTavern
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}${BOLD}酒馆删除完成！${NC}"
+    else
+        echo -e "${RED}${BOLD}酒馆删除失败！${NC}"
+    fi
+}
+
 # 备份酒馆数据
 backup_sillytavern() {
     echo -e "${CYAN}${BOLD}==== 备份酒馆数据 ====${NC}"
@@ -258,10 +289,11 @@ show_menu() {
     echo -e "${GREEN}${BOLD}1. 部署酒馆${NC}"
     echo -e "${BLUE}${BOLD}2. 启动酒馆${NC}"
     echo -e "${MAGENTA}${BOLD}3. 更新酒馆${NC}"
-    echo -e "${BRIGHT_CYAN}${BOLD}4. 备份酒馆数据${NC}"
-    echo -e "${BRIGHT_BLUE}${BOLD}5. 更新Termux${NC}"
+    echo -e "${BRIGHT_RED}${BOLD}4. 删除酒馆${NC}"
+    echo -e "${BRIGHT_CYAN}${BOLD}5. 备份酒馆数据${NC}"
+    echo -e "${BRIGHT_BLUE}${BOLD}6. 更新Termux${NC}"
     echo -e "${CYAN}${BOLD}================================${NC}"
-    echo -ne "${BRIGHT_CYAN}${BOLD}请选择操作 (0-5): ${NC}"
+    echo -ne "${BRIGHT_CYAN}${BOLD}请选择操作 (0-6): ${NC}"
 }
 
 # 退出脚本
@@ -300,10 +332,14 @@ while true; do
             press_any_key
             ;;
         4)
-            backup_sillytavern
+            delete_sillytavern
             press_any_key
             ;;
         5)
+            backup_sillytavern
+            press_any_key
+            ;;
+        6)
             update_termux
             press_any_key
             ;;
