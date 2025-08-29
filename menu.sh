@@ -118,6 +118,31 @@ EOF
 # 调用初始化函数
 init_backup_script
 
+# 强制二选一函数 (y/n)
+confirm_choice() {
+    local prompt="$1"
+    local choice
+    
+    while true; do
+        echo -ne "$prompt"
+        read -r choice
+        # 转换为小写并去除前后空格
+        choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]' | xargs)
+        
+        case "$choice" in
+            y|yes)
+                return 0
+                ;;
+            n|no)
+                return 1
+                ;;
+            *)
+                echo -e "${RED}请输入 y/yes 或 n/no！${NC}"
+                ;;
+        esac
+    done
+}
+
 # 检查并安装必要工具（详细提示）
 check_tools() {
     echo -e "${CYAN}${BOLD}==== 检查必要工具 ====${NC}"
@@ -209,19 +234,18 @@ deploy_sillytavern() {
     # 检查是否已存在
     if [ -d "$HOME/SillyTavern" ]; then
         echo -e "${YELLOW}${BOLD}酒馆目录已存在${NC}"
-        echo -ne "${BLUE}${BOLD}是否重新部署? (y/n): ${NC}"
-        read -r confirm
-        if [[ $confirm != "y" && $confirm != "Y" ]]; then
+        if confirm_choice "${BLUE}${BOLD}是否重新部署? (y/n): ${NC}"; then
+            echo -e "${YELLOW}${BOLD}重新克隆酒馆...${NC}"
+            rm -rf "$HOME/SillyTavern"
+            # 如果用户选择重新部署，则检查工具
+            check_tools
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}${BOLD}工具安装失败，部署取消！${NC}"
+                return 1
+            fi
+        else
             echo -e "${YELLOW}${BOLD}取消部署${NC}"
             return 0
-        fi
-        echo -e "${YELLOW}${BOLD}重新克隆酒馆...${NC}"
-        rm -rf "$HOME/SillyTavern"
-        # 如果用户选择重新部署，则检查工具
-        check_tools
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}${BOLD}工具安装失败，部署取消！${NC}"
-            return 1
         fi
     fi
     
@@ -273,11 +297,8 @@ start_sillytavern() {
     # 智能检测目录位置
     if [[ "$(basename "$(pwd)")" == "SillyTavern" ]]; then
         echo -e "${GREEN}${BOLD}已在酒馆目录，直接启动${NC}"
-    elif [ -d "$HOME/SillyTavern" ]; then
-        echo -e "${YELLOW}${BOLD}切换到酒馆目录...${NC}"
-        cd "$HOME/SillyTavern"
-    else
-        echo -e "${RED}${BOLD}酒馆目录不存在，请先部署酒馆！${NC}"
+    elif [ -d "$HOME then
+       到/Silly馆;
         return 1
     fi
 
@@ -331,19 +352,16 @@ delete_sillytavern() {
 
     # 确认删除
     echo -e "${BRIGHT_RED}${BOLD}警告：此操作将永久删除 SillyTavern 目录及其所有内容！${NC}"
-    echo -ne "${YELLOW}${BOLD}确认删除? (y/N): ${NC}"
-    read -r confirm
-    if [[ $confirm != "y" && $confirm != "Y" ]]; then
-        echo -e "${YELLOW}${BOLD}取消删除${NC}"
-        return 0
-    fi
-
-    # 执行删除
-    rm -rf "$HOME/SillyTavern"
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}${BOLD}酒馆删除完成！${NC}"
+    if confirm_choice "${YELLOW}${BOLD}确认删除? (y/N): ${NC}"; then
+        # 执行删除
+        rm -rf "$HOME/SillyTavern"
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}${BOLD}酒馆删除完成！${NC}"
+        else
+            echo -e "${RED}${BOLD}酒馆删除失败！${NC}"
+        fi
     else
-        echo -e "${RED}${BOLD}酒馆删除失败！${NC}"
+        echo -e "${YELLOW}${BOLD}取消删除${NC}"
     fi
 }
 
@@ -408,18 +426,18 @@ while true; do
                 echo -e "${GREEN}${BOLD}✅ 系统包更新完成！${NC}"
             elif [ $update_status -eq 124 ]; then
                 echo -e "${RED}${BOLD}❌ 系统包更新超时！${NC}"
-                echo -e "${YELLOW}${BOLD}是否继续部署? (y/N): ${NC}"
-                read -r continue_deploy
-                if [[ $continue_deploy != "y" && $continue_deploy != "Y" ]]; then
+                if confirm_choice "${YELLOW}${BOLD}是否继续部署? (y/N): ${NC}"; then
+                    echo -e "${YELLOW}${BOLD}继续部署...${NC}"
+                else
                     echo -e "${YELLOW}${BOLD}取消部署，返回主菜单${NC}"
                     press_any_key
                     continue
                 fi
             else
                 echo -e "${RED}${BOLD}❌ 系统包更新失败！错误代码: $update_status${NC}"
-                echo -e "${YELLOW}${BOLD}是否继续部署? (y/N): ${NC}"
-                read -r continue_deploy
-                if [[ $continue_deploy != "y" && $continue_deploy != "Y" ]]; then
+                if confirm_choice "${YELLOW}${BOLD}是否继续部署? (y/N): ${NC}"; then
+                    echo -e "${YELLOW}${BOLD}继续部署...${NC}"
+                else
                     echo -e "${YELLOW}${BOLD}取消部署，返回主菜单${NC}"
                     press_any_key
                     continue
