@@ -54,9 +54,10 @@ if [ ! -d "$src_dir" ]; then
     exit 1
 fi
 
-# 检查 Term储符号链接是否存在 (ux-setup-storage 是否生效)
-if !" ]; then 储链接目录 '$backup_dir_base' 不存在。"
-先执行 'termux-setup-storage' 并授予权限，然后重新启动 Termux。"
+# 检查 Termux 存储符号链接是否存在 (基本判断 termux-setup-storage 是否生效)
+if [ ! -d "$backup_dir_base" ]; then
+    echo "❌ 错误：Termux 存储链接目录 '$backup_dir_base' 不存在。"
+    echo "请先执行 'termux-setup-storage' 并授予权限，然后重新启动 Termux。"
     exit 1
 fi
 
@@ -401,11 +402,11 @@ while true; do
             
             # 设置超时时间（300秒=5分钟）
             timeout 300 pkg update && pkg upgrade -y
-            local update_exit_code=$?
+            update_status=$?
             
-            if [ $update_exit_code -eq 0 ]; then
+            if [ $update_status -eq 0 ]; then
                 echo -e "${GREEN}${BOLD}✅ 系统包更新完成！${NC}"
-            elif [ $update_exit_code -eq 124 ]; then
+            elif [ $update_status -eq 124 ]; then
                 echo -e "${RED}${BOLD}❌ 系统包更新超时！${NC}"
                 echo -e "${YELLOW}${BOLD}是否继续部署? (y/N): ${NC}"
                 read -r continue_deploy
@@ -415,7 +416,7 @@ while true; do
                     continue
                 fi
             else
-                echo -e "${RED}${BOLD}❌ 系统包更新失败！错误代码: $update_exit_code${NC}"
+                echo -e "${RED}${BOLD}❌ 系统包更新失败！错误代码: $update_status${NC}"
                 echo -e "${YELLOW}${BOLD}是否继续部署? (y/N): ${NC}"
                 read -r continue_deploy
                 if [[ $continue_deploy != "y" && $continue_deploy != "Y" ]]; then
