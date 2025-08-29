@@ -118,39 +118,52 @@ EOF
 # 调用初始化函数
 init_backup_script
 
-# 检查并安装必要工具
+# 检查并安装必要工具（仅安装缺失项）
 check_tools() {
     echo -e "${CYAN}${BOLD}==== 检查必要工具 ====${NC}"
+
+    local missing_tools=()
+
+    # 检查 git
     if ! command -v git &>/dev/null; then
-        echo -e "${YELLOW}${BOLD}正在安装git...${NC}"
-        pkg install git -y
+        missing_tools+=(git)
     fi
-    if ! command -v nodejs &>/dev/null; then
-        echo -e "${YELLOW}${BOLD}正在安装nodejs...${NC}"
-        pkg install nodejs-lts -y
+
+    # 检查 nodejs
+    if ! command -v node &>/dev/null; then
+        missing_tools+=(nodejs-lts)
     fi
+
+    # 检查 nano
     if ! command -v nano &>/dev/null; then
-        echo -e "${YELLOW}${BOLD}正在安装nano...${NC}"
-        pkg install nano -y
+        missing_tools+=(nano)
     fi
-    # 检查zip是否安装
+
+    # 检查 zip
     if ! command -v zip &>/dev/null; then
-        echo -e "${YELLOW}${BOLD}正在安装zip...${NC}"
-        pkg install zip -y
+        missing_tools+=(zip)
     fi
+
+    # 如果有缺失的工具，则安装它们
+    if [ ${#missing_tools[@]} -gt 0 ]; then
+        echo -e "${YELLOW}${BOLD}正在安装缺失的工具: ${missing_tools[*]}${NC}"
+        pkg install "${missing_tools[@]}" -y
+    else
+        echo -e "${GREEN}${BOLD}所有必要工具均已安装，跳过安装步骤${NC}"
+    fi
+
     echo -e "${GREEN}${BOLD}工具检查完成！${NC}"
 }
 
 # 部署酒馆
 deploy_sillytavern() {
     echo -e "${CYAN}${BOLD}==== 部署酒馆 ====${NC}"
-    
+
     # 强制回到主目录执行
     cd ~
-    
+
     pkg update && pkg upgrade -y
-    pkg install git nodejs-lts nano -y
-    
+
     # 检查是否已存在
     if [ -d "~/SillyTavern" ]; then
         echo -e "${YELLOW}${BOLD}酒馆目录已存在${NC}"
@@ -163,20 +176,27 @@ deploy_sillytavern() {
         echo -e "${YELLOW}${BOLD}重新克隆酒馆...${NC}"
         rm -rf ~/SillyTavern
     fi
-    
+
+    # 执行克隆，并捕获退出码
     git clone https://github.com/SillyTavern/SillyTavern -b release ~/SillyTavern
-    
-    if [ $? -eq 0 ]; then
+    local clone_exit_code=$?
+
+    if [ $clone_exit_code -eq 0 ]; then
         echo -e "${GREEN}${BOLD}酒馆部署完成！${NC}"
+    elif [ $clone_exit_code -eq 130 ]; then
+        echo -e "${RED}${BOLD}❌ 克隆过程被用户中断（CTRL+C）！${NC}"
+        echo -e "${YELLOW}${BOLD}正在返回主菜单...${NC}"
+        return 1  # 返回主菜单
     else
-        echo -e "${RED}${BOLD}酒馆部署失败！${NC}"
+        echo -e "${RED}${BOLD}❌ 酒馆克隆失败，退出码: $clone_exit_code${NC}"
+        return 1  # 返回主菜单
     fi
 }
 
 # 启动酒馆
 start_sillytavern() {
     echo -e "${CYAN}${BOLD}==== 启动酒馆 ====${NC}"
-    
+
     # 智能检测目录位置
     if [[ "$(basename "$(pwd)")" == "SillyTavern" ]]; then
         echo -e "${GREEN}${BOLD}已在酒馆目录，直接启动${NC}"
@@ -187,7 +207,7 @@ start_sillytavern() {
         echo -e "${RED}${BOLD}酒馆目录不存在，请先部署酒馆！${NC}"
         return 1
     fi
-    
+
     if [ -f "start.sh" ]; then
         echo -e "${GREEN}${BOLD}执行启动脚本...${NC}"
         bash start.sh
@@ -199,7 +219,7 @@ start_sillytavern() {
 # 更新酒馆
 update_sillytavern() {
     echo -e "${CYAN}${BOLD}==== 更新酒馆 ====${NC}"
-    
+
     # 智能检测目录位置
     if [[ "$(basename "$(pwd)")" == "SillyTavern" ]]; then
         echo -e "${GREEN}${BOLD}已在酒馆目录，直接更新${NC}"
@@ -210,7 +230,7 @@ update_sillytavern() {
         echo -e "${RED}${BOLD}酒馆目录不存在，请先部署酒馆！${NC}"
         return 1
     fi
-    
+
     if [ -d ".git" ]; then
         git pull --rebase --autostash
         if [ $? -eq 0 ]; then
@@ -226,16 +246,16 @@ update_sillytavern() {
 # 删除酒馆
 delete_sillytavern() {
     echo -e "${CYAN}${BOLD}==== 删除酒馆 ====${NC}"
-    
+
     # 强制回到主目录执行
     cd ~
-    
+
     # 检查目录是否存在
     if [ ! -d "$HOME/SillyTavern" ]; then
         echo -e "${YELLOW}${BOLD}酒馆目录不存在，无需删除${NC}"
         return 0
     fi
-    
+
     # 确认删除
     echo -e "${BRIGHT_RED}${BOLD}警告：此操作将永久删除 SillyTavern 目录及其所有内容！${NC}"
     echo -ne "${YELLOW}${BOLD}确认删除? (y/N): ${NC}"
@@ -244,7 +264,7 @@ delete_sillytavern() {
         echo -e "${YELLOW}${BOLD}取消删除${NC}"
         return 0
     fi
-    
+
     # 执行删除
     rm -rf ~/SillyTavern
     if [ $? -eq 0 ]; then
@@ -258,7 +278,7 @@ delete_sillytavern() {
 backup_sillytavern() {
     echo -e "${CYAN}${BOLD}==== 备份酒馆 ====${NC}"
     local backup_script="$HOME/backup_sillytavern.sh"
-    
+
     if [ -f "$backup_script" ]; then
         bash "$backup_script"
     else
