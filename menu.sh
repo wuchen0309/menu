@@ -20,6 +20,31 @@ NC='\033[0m'
 clear
 cd "$HOME"
 
+# 强制二选一函数 (y/n)
+confirm_choice() {
+    local prompt="$1"
+    local choice
+    
+    while true; do
+        echo -ne "$prompt"
+        read -r choice
+        # 转换为小写并去除前后空格
+        choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]' | xargs)
+        
+        case "$choice" in
+            y|yes)
+                return 0
+                ;;
+            n|no)
+                return 1
+                ;;
+            *)
+                echo -e "${RED}请输入 y/yes 或 n/no！${NC}"
+                ;;
+        esac
+    done
+}
+
 # 初始化备份脚本（如果不存在）
 init_backup_script() {
     local backup_script="$HOME/backup_sillytavern.sh"
@@ -117,31 +142,6 @@ EOF
 
 # 调用初始化函数
 init_backup_script
-
-# 强制二选一函数 (y/n)
-confirm_choice() {
-    local prompt="$1"
-    local choice
-    
-    while true; do
-        echo -ne "$prompt"
-        read -r choice
-        # 转换为小写并去除前后空格
-        choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]' | xargs)
-        
-        case "$choice" in
-            y|yes)
-                return 0
-                ;;
-            n|no)
-                return 1
-                ;;
-            *)
-                echo -e "${RED}请输入 y/yes 或 n/no！${NC}"
-                ;;
-        esac
-    done
-}
 
 # 检查并安装必要工具（详细提示）
 check_tools() {
@@ -297,8 +297,11 @@ start_sillytavern() {
     # 智能检测目录位置
     if [[ "$(basename "$(pwd)")" == "SillyTavern" ]]; then
         echo -e "${GREEN}${BOLD}已在酒馆目录，直接启动${NC}"
-    elif [ -d "$HOME then
-       到/Silly馆;
+    elif [ -d "$HOME/SillyTavern" ]; then
+        echo -e "${YELLOW}${BOLD}切换到酒馆目录...${NC}"
+        cd "$HOME/SillyTavern"
+    else
+        echo -e "${RED}${BOLD}酒馆目录不存在，请先部署酒馆！${NC}"
         return 1
     fi
 
