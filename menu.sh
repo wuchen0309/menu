@@ -158,14 +158,12 @@ check_tools() {
 # 部署酒馆
 deploy_sillytavern() {
     echo -e "${CYAN}${BOLD}==== 部署酒馆 ====${NC}"
-
+    
     # 强制回到主目录执行
     cd ~
-
-    pkg update && pkg upgrade -y
-
+    
     # 检查是否已存在
-    if [ -d "~/SillyTavern" ]; then
+    if [ -d "$HOME/SillyTavern" ]; then
         echo -e "${YELLOW}${BOLD}酒馆目录已存在${NC}"
         echo -ne "${BLUE}${BOLD}是否重新部署? (y/n): ${NC}"
         read -r confirm
@@ -174,11 +172,18 @@ deploy_sillytavern() {
             return 0
         fi
         echo -e "${YELLOW}${BOLD}重新克隆酒馆...${NC}"
-        rm -rf ~/SillyTavern
+        rm -rf "$HOME/SillyTavern"
+        # 如果用户选择重新部署，则检查工具
+        check_tools
     fi
-
+    
+    # 如果是全新安装，直接检查工具
+    if [ ! -d "$HOME/SillyTavern" ]; then
+        check_tools
+    fi
+    
     # 执行克隆，并捕获退出码
-    git clone https://github.com/SillyTavern/SillyTavern -b release ~/SillyTavern
+    git clone https://github.com/SillyTavern/SillyTavern -b release "$HOME/SillyTavern"
     local clone_exit_code=$?
 
     if [ $clone_exit_code -eq 0 ]; then
@@ -202,7 +207,7 @@ start_sillytavern() {
         echo -e "${GREEN}${BOLD}已在酒馆目录，直接启动${NC}"
     elif [ -d "$HOME/SillyTavern" ]; then
         echo -e "${YELLOW}${BOLD}切换到酒馆目录...${NC}"
-        cd ~/SillyTavern
+        cd "$HOME/SillyTavern"
     else
         echo -e "${RED}${BOLD}酒馆目录不存在，请先部署酒馆！${NC}"
         return 1
@@ -225,7 +230,7 @@ update_sillytavern() {
         echo -e "${GREEN}${BOLD}已在酒馆目录，直接更新${NC}"
     elif [ -d "$HOME/SillyTavern" ]; then
         echo -e "${YELLOW}${BOLD}切换到酒馆目录...${NC}"
-        cd ~/SillyTavern
+        cd "$HOME/SillyTavern"
     else
         echo -e "${RED}${BOLD}酒馆目录不存在，请先部署酒馆！${NC}"
         return 1
@@ -266,7 +271,7 @@ delete_sillytavern() {
     fi
 
     # 执行删除
-    rm -rf ~/SillyTavern
+    rm -rf "$HOME/SillyTavern"
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}${BOLD}酒馆删除完成！${NC}"
     else
@@ -323,7 +328,9 @@ while true; do
             exit_script
             ;;
         1)
-            check_tools
+            # 先更新系统包列表
+            echo -e "${CYAN}${BOLD}==== 更新系统包 ====${NC}"
+            pkg update && pkg upgrade -y
             deploy_sillytavern
             press_any_key
             ;;
