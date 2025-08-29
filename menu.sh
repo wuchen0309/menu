@@ -237,25 +237,17 @@ deploy_sillytavern() {
         if confirm_choice "${BLUE}${BOLD}是否重新部署? (y/n): ${NC}"; then
             echo -e "${YELLOW}${BOLD}重新克隆酒馆...${NC}"
             rm -rf "$HOME/SillyTavern"
-            # 如果用户选择重新部署，则检查工具
-            check_tools
-            if [ $? -ne 0 ]; then
-                echo -e "${RED}${BOLD}工具安装失败，部署取消！${NC}"
-                return 1
-            fi
         else
             echo -e "${YELLOW}${BOLD}取消部署${NC}"
             return 0
         fi
     fi
     
-    # 如果是全新安装，直接检查工具
-    if [ ! -d "$HOME/SillyTavern" ]; then
-        check_tools
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}${BOLD}工具安装失败，部署取消！${NC}"
-            return 1
-        fi
+    # 统一检查工具（不管全新部署还是重新部署，都只检查一次）
+    check_tools
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}${BOLD}工具安装失败，部署取消！${NC}"
+        return 1
     fi
     
     # 执行克隆，并捕获退出码
