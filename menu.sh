@@ -254,30 +254,15 @@ delete_sillytavern() {
     fi
 }
 
-# 备份酒馆数据
+# 备份酒馆
 backup_sillytavern() {
-    echo -e "${CYAN}${BOLD}==== 备份酒馆数据 ====${NC}"
+    echo -e "${CYAN}${BOLD}==== 备份酒馆 ====${NC}"
     local backup_script="$HOME/backup_sillytavern.sh"
     
     if [ -f "$backup_script" ]; then
         bash "$backup_script"
     else
         echo -e "${RED}${BOLD}备份脚本不存在！${NC}"
-    fi
-}
-
-# 更新Termux镜像源（必须在主目录执行）
-update_termux() {
-    echo -e "${CYAN}${BOLD}==== 更新Termux ====${NC}"
-    
-    # 强制回到主目录执行
-    cd ~
-    
-    pkg update && pkg upgrade -y
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}${BOLD}Termux更新完成！${NC}"
-    else
-        echo -e "${RED}${BOLD}Termux更新失败！${NC}"
     fi
 }
 
@@ -291,9 +276,8 @@ show_menu() {
     echo -e "${MAGENTA}${BOLD}3. 更新酒馆${NC}"
     echo -e "${BRIGHT_RED}${BOLD}4. 删除酒馆${NC}"
     echo -e "${BRIGHT_CYAN}${BOLD}5. 备份酒馆${NC}"
-    echo -e "${BRIGHT_BLUE}${BOLD}6. 更新Termux${NC}"
     echo -e "${CYAN}${BOLD}================================${NC}"
-    echo -ne "${BRIGHT_CYAN}${BOLD}请选择操作 (0-6): ${NC}"
+    echo -ne "${BRIGHT_CYAN}${BOLD}请选择操作 (0-5): ${NC}"
 }
 
 # 退出脚本
@@ -337,10 +321,6 @@ while true; do
             ;;
         5)
             backup_sillytavern
-            press_any_key
-            ;;
-        6)
-            update_termux
             press_any_key
             ;;
         *)
