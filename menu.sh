@@ -16,9 +16,8 @@ BRIGHT_RED='\033[38;5;196m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-# 启动时自动清屏并回到主目录
+# 启动时自动清屏
 clear
-cd "$HOME"
 
 # 强制二选一函数 (y/n)
 confirm_choice() {
